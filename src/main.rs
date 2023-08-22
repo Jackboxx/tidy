@@ -1,6 +1,7 @@
 use std::{
     env,
     fs::{self, DirEntry},
+    path::PathBuf,
 };
 
 fn main() {
@@ -9,13 +10,16 @@ fn main() {
 
     for entry in fs::read_dir(current_dir).unwrap() {
         let entry = entry.unwrap();
-        handle_dir(entry, &dir_names);
+
+        if let Some(path) = handle_dir(entry, &dir_names) {
+            println!("{}", path.to_string_lossy());
+        }
     }
 }
 
-fn handle_dir(entry: DirEntry, dir_names: &[&str]) {
+fn handle_dir(entry: DirEntry, dir_names: &[&str]) -> Option<PathBuf> {
     if entry.file_type().map(|t| !t.is_dir()).unwrap_or(true) {
-        return;
+        return None;
     }
 
     let name = entry.file_name();
@@ -23,5 +27,8 @@ fn handle_dir(entry: DirEntry, dir_names: &[&str]) {
 
     if dir_names.contains(&name) {
         fs::remove_dir_all(entry.path()).unwrap();
+        Some(entry.path())
+    } else {
+        None
     }
 }

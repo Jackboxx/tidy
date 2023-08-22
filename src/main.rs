@@ -1,34 +1,49 @@
 use std::{
     env,
     fs::{self, DirEntry},
-    path::PathBuf,
+    io,
 };
 
+const DIRS: &[&str] = &["node_modules", "target"];
+
 fn main() {
-    let dir_names = vec!["node_modules", "target"];
-    let current_dir = env::current_dir().unwrap();
+    let Ok(current_dir) = env::current_dir() else {
+        eprintln!("failed to access current working directory");
+        return;
+    };
 
-    for entry in fs::read_dir(current_dir).unwrap() {
-        let entry = entry.unwrap();
+    let Ok( entries ) = fs::read_dir(current_dir) else {
+        eprintln!("failed to read content of current working directory");
+        return;
+    };
 
-        if let Some(path) = handle_dir(entry, &dir_names) {
-            println!("{}", path.to_string_lossy());
-        }
-    }
+    entries.flatten().for_each(|e| {
+        handle_dir(e);
+    });
 }
 
-fn handle_dir(entry: DirEntry, dir_names: &[&str]) -> Option<PathBuf> {
+fn handle_dir(entry: DirEntry) {
     if entry.file_type().map(|t| !t.is_dir()).unwrap_or(true) {
-        return None;
+        return;
     }
 
     let name = entry.file_name();
-    let name = name.to_str().unwrap();
+    let name = name.to_str().unwrap_or("");
 
-    if dir_names.contains(&name) {
-        fs::remove_dir_all(entry.path()).unwrap();
-        Some(entry.path())
+    if DIRS.contains(&name) {
+        let path = entry.path();
+        let str_path = path.to_string_lossy();
+
+        match fs::remove_dir_all(entry.path()) {
+            Ok(()) => println!("{str_path}"),
+            Err(err) => match err.kind() {
+                io::ErrorKind::PermissionDenied => {
+                    println!("missing permissions to delete {str_path}")
+                }
+                _ => println!("failed to delete {str_path}\n{err}"),
+            },
+        }
     } else {
-        None
+        handle_dir(entry);
     }
 }

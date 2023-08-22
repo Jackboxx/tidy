@@ -10,9 +10,9 @@ use clap::Parser;
 #[command(author, version, about, long_about = None)]
 struct CliArgs {
     #[arg(short, long, value_delimiter = ',', num_args = 1..)]
-    pub ignore_dirs: Option<Vec<String>>,
+    ignore_dirs: Option<Vec<String>>,
     #[arg(short, long, value_delimiter = ',', num_args = 1..)]
-    pub target_dirs: Option<Vec<String>>,
+    target_dirs: Option<Vec<String>>,
 }
 
 fn main() {

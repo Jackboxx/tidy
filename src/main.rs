@@ -13,6 +13,8 @@ struct CliArgs {
     ignore_dirs: Option<Vec<String>>,
     #[arg(short, long, value_delimiter = ',', num_args = 1..)]
     target_dirs: Option<Vec<String>>,
+    #[arg(short = 'd', long, default_value_t = 10)]
+    max_depth: usize,
 }
 
 fn main() {
@@ -45,14 +47,22 @@ fn main() {
     entries.flatten().for_each(|e| {
         handle_dir(
             e,
+            0,
+            args.max_depth,
             &target_dir.iter().map(|e| e.as_str()).collect::<Vec<_>>(),
             &ignore_dirs.iter().map(|e| e.as_str()).collect::<Vec<_>>(),
         );
     });
 }
 
-fn handle_dir(entry: DirEntry, target_dirs: &[&str], ignore_dirs: &[&str]) {
-    if entry.file_type().map(|t| !t.is_dir()).unwrap_or(true) {
+fn handle_dir(
+    entry: DirEntry,
+    depth: usize,
+    max_depth: usize,
+    target_dirs: &[&str],
+    ignore_dirs: &[&str],
+) {
+    if depth >= max_depth || entry.file_type().map(|t| !t.is_dir()).unwrap_or(true) {
         return;
     }
 
@@ -77,7 +87,7 @@ fn handle_dir(entry: DirEntry, target_dirs: &[&str], ignore_dirs: &[&str]) {
     } else if !ignore_dirs.contains(&name) {
         match fs::read_dir(entry.path()) {
             Ok(entries) => entries.flatten().for_each(|e| {
-                handle_dir(e, target_dirs, ignore_dirs);
+                handle_dir(e, depth + 1, max_depth, target_dirs, ignore_dirs);
             }),
             Err(err) => match err.kind() {
                 io::ErrorKind::PermissionDenied => {

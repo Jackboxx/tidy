@@ -27,23 +27,37 @@ fn handle_dir(entry: DirEntry) {
         return;
     }
 
+    let path = entry.path();
+    let str_path = path.to_string_lossy();
+
     let name = entry.file_name();
     let name = name.to_str().unwrap_or("");
 
     if DIRS.contains(&name) {
-        let path = entry.path();
-        let str_path = path.to_string_lossy();
-
         match fs::remove_dir_all(entry.path()) {
             Ok(()) => println!("{str_path}"),
             Err(err) => match err.kind() {
                 io::ErrorKind::PermissionDenied => {
-                    println!("missing permissions to delete {str_path}")
+                    eprintln!("missing permissions to delete {str_path}");
                 }
-                _ => println!("failed to delete {str_path}\n{err}"),
+                _ => {
+                    eprintln!("failed to delete {str_path}\n{err}");
+                }
             },
         }
     } else {
-        handle_dir(entry);
+        match fs::read_dir(entry.path()) {
+            Ok(entries) => entries.flatten().for_each(|e| {
+                handle_dir(e);
+            }),
+            Err(err) => match err.kind() {
+                io::ErrorKind::PermissionDenied => {
+                    eprintln!("missing permissions to read content of {str_path}");
+                }
+                _ => {
+                    eprintln!("failed to read content of {str_path}\n{err}")
+                }
+            },
+        }
     }
 }

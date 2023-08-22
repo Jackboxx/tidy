@@ -9,10 +9,13 @@ use clap::Parser;
 #[derive(Debug, Parser)]
 #[command(author, version, about, long_about = None)]
 struct CliArgs {
+    /// Directories who's children will not be searched
     #[arg(short, long, value_delimiter = ',', num_args = 1..)]
     ignore_dirs: Option<Vec<String>>,
     #[arg(short, long, value_delimiter = ',', num_args = 1..)]
+    /// Directories that will be deleted
     target_dirs: Option<Vec<String>>,
+    /// Maximum depth that can be searched
     #[arg(short = 'd', long, default_value_t = 10)]
     max_depth: usize,
 }

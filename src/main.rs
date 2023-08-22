@@ -4,9 +4,10 @@ use std::{
     io,
 };
 
-const DIRS: &[&str] = &["node_modules", "target"];
-
 fn main() {
+    let target_dir = vec!["node_modules", "target"];
+    let ignore_dirs = vec![".cache", ".local", ".config"];
+
     let Ok(current_dir) = env::current_dir() else {
         eprintln!("failed to access current working directory");
         return;
@@ -18,11 +19,11 @@ fn main() {
     };
 
     entries.flatten().for_each(|e| {
-        handle_dir(e);
+        handle_dir(e, &target_dir, &ignore_dirs);
     });
 }
 
-fn handle_dir(entry: DirEntry) {
+fn handle_dir(entry: DirEntry, target_dirs: &[&str], ignore_dirs: &[&str]) {
     if entry.file_type().map(|t| !t.is_dir()).unwrap_or(true) {
         return;
     }
@@ -33,7 +34,7 @@ fn handle_dir(entry: DirEntry) {
     let name = entry.file_name();
     let name = name.to_str().unwrap_or("");
 
-    if DIRS.contains(&name) {
+    if target_dirs.contains(&name) {
         match fs::remove_dir_all(entry.path()) {
             Ok(()) => println!("{str_path}"),
             Err(err) => match err.kind() {
@@ -45,10 +46,10 @@ fn handle_dir(entry: DirEntry) {
                 }
             },
         }
-    } else {
+    } else if !ignore_dirs.contains(&name) {
         match fs::read_dir(entry.path()) {
             Ok(entries) => entries.flatten().for_each(|e| {
-                handle_dir(e);
+                handle_dir(e, target_dirs, ignore_dirs);
             }),
             Err(err) => match err.kind() {
                 io::ErrorKind::PermissionDenied => {

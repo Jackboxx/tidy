@@ -4,9 +4,33 @@ use std::{
     io,
 };
 
+use clap::Parser;
+
+#[derive(Debug, Parser)]
+#[command(author, version, about, long_about = None)]
+struct CliArgs {
+    #[arg(short, long, value_delimiter = ',', num_args = 1..)]
+    pub ignore_dirs: Option<Vec<String>>,
+    #[arg(short, long, value_delimiter = ',', num_args = 1..)]
+    pub target_dirs: Option<Vec<String>>,
+}
+
 fn main() {
-    let target_dir = vec!["node_modules", "target"];
-    let ignore_dirs = vec![".cache", ".local", ".config"];
+    let args = CliArgs::parse();
+
+    let target_dir: Vec<_> = args.target_dirs.unwrap_or(
+        vec!["node_modules", "target"]
+            .into_iter()
+            .map(|e| e.to_owned())
+            .collect(),
+    );
+
+    let ignore_dirs: Vec<_> = args.ignore_dirs.unwrap_or(
+        vec![".cache", ".local", ".config"]
+            .into_iter()
+            .map(|e| e.to_owned())
+            .collect(),
+    );
 
     let Ok(current_dir) = env::current_dir() else {
         eprintln!("failed to access current working directory");
@@ -19,7 +43,11 @@ fn main() {
     };
 
     entries.flatten().for_each(|e| {
-        handle_dir(e, &target_dir, &ignore_dirs);
+        handle_dir(
+            e,
+            &target_dir.iter().map(|e| e.as_str()).collect::<Vec<_>>(),
+            &ignore_dirs.iter().map(|e| e.as_str()).collect::<Vec<_>>(),
+        );
     });
 }
 
